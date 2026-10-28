@@ -1,0 +1,9 @@
+{
+  "name": "toolsadminvaltherian",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static Bank JSON Studio with a Vercel AI Gateway serverless route",
+  "dependencies": {
+    "@vercel/oidc": "4.0.4"
+  }
+}

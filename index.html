@@ -132,7 +132,7 @@ if(eq&&/[xX]/.test(eq[1])){
 var sides=eq[1].replace(/[.?!]+$/,'').split('=').map(function(s){return s.trim()}),l0=evaluateMathExpression(sides[0],0),l1=evaluateMathExpression(sides[0],1),r0=evaluateMathExpression(sides[1],0),r1=evaluateMathExpression(sides[1],1);
 if(l0!==null&&l1!==null&&r0!==null&&r1!==null){
 var coefficient=(l1-l0)-(r1-r0),constant=r0-l0;
-if(Math.abs(coefficient)>1e-10){value=constant/coefficient;method='linear-equation';explanation='Persamaan '+sides[0].trim()+' = '+sides[1].trim()+' diselesaikan dengan mengisolasi x: setelah konstanta dipindahkan ke sisi kanan dan koefisien x dibagi, diperoleh x = '+value+'. Jadi, jawaban yang benar adalah opsi '}
+if(Math.abs(coefficient)>1e-10){value=constant/coefficient;method='linear-equation';explanation='Dari persamaan '+sides[0].trim()+' = '+sides[1].trim()+', kumpulkan suku x di satu sisi: ('+coefficient+')x = '+constant+'. Bagi kedua sisi dengan '+coefficient+' sehingga x = '+value+'. Jadi, jawaban yang benar adalah opsi '}
 }}
 }
 if(value===undefined){

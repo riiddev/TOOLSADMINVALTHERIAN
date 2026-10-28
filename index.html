@@ -63,24 +63,48 @@ $('#groups').addEventListener('click',function(e){var b=e.target.closest('button
 $('#addGroup').addEventListener('click',function(){state.groups.push(newGroup(state.groups.length+1));render();invalidate()});
 $('#addQuestion').addEventListener('click',function(){state.groups[state.groups.length-1].questions.push(newQuestion());render();invalidate()});
 function parseText(text,src){
-var lines=text.replace(/\r/g,'').split('\n'),qs=[],q=null,mode='prompt',warnings=[];
+var rawLines=text.replace(/\r/g,'').split('\n'),lines=[],qs=[],q=null,mode='prompt',warnings=[];
+function splitInline(raw){
+var line=raw.trim();if(!line)return[];
+var re=/(?:^|\s)(?:\(([A-E])\)|\[([A-E])\]|([A-E])[.)：:、])\s+/gi,m,marks=[],labels=[];
+while((m=re.exec(line))!==null){var label=(m[1]||m[2]||m[3]).toUpperCase(),start=m.index+(/^\s/.test(m[0])?1:0);marks.push({label:label,start:start});if(labels.indexOf(label)<0)labels.push(label)}
+if(labels.length<3||labels.indexOf('A')<0||labels.indexOf('B')<0||labels.indexOf('C')<0)return[line];
+var parts=[];if(marks[0].start>0)parts.push(line.slice(0,marks[0].start).trim());
+for(var i=0;i<marks.length;i++){var end=i+1<marks.length?marks[i+1].start:line.length;parts.push(line.slice(marks[i].start,end).trim())}
+return parts.filter(Boolean)
+}
+rawLines.forEach(function(raw){var parts=splitInline(raw);parts.forEach(function(part){lines.push(part)})});
 function blank(){return {prompt:'',options:[],correctAnswer:null,explanation:'',source:src||'Konversi file'}}
-function finish(){if(q){if(q.options.length===0)q.options=['','','',''];while(q.options.length<4)q.options.push('');qs.push(q);q=null}}
-lines.forEach(function(raw){var line=raw.trim();if(!line)return;var key=line.match(/^(?:kunci(?:\s+jawaban)?|jawaban\s+benar)\s*[:\-]\s*([A-E1-5])\b/i);var exp=line.match(/^(?:pembahasan|penjelasan|alasan)\s*[:\-]\s*(.*)$/i);var source=line.match(/^sumber\s*[:\-]\s*(.*)$/i);var opt=line.match(/^(?:\(?([A-E])\)?[\.\):]|\[([A-E])\])\s*(.*)$/i);var num=line.match(/^(?:(?:soal|nomor)\s*)?(\d{1,3})[\.\)]\s*(.*)$/i);
-if(key&&q){var ch=key[1].toUpperCase();q.correctAnswer=/^[1-5]$/.test(ch)?Number(ch)-1:ch.charCodeAt(0)-65;return}
+function finish(){if(q){qs.push(q);q=null}}
+lines.forEach(function(raw){
+var line=raw.trim();if(!line)return;
+var key=line.match(/^(?:kunci(?:\s+jawaban)?|jawaban(?:\s+benar)?|answer|ans)\s*(?:[:=\-]\s*|\s+)(?:adalah\s+)?([A-E1-5])\b/i);
+var exp=line.match(/^(?:pembahasan|penjelasan|alasan|explanation)\s*[:=\-]\s*(.*)$/i);
+var source=line.match(/^sumber\s*[:=\-]\s*(.*)$/i);
+var opt=line.match(/^(?:(?:opsi|pilihan)\s+)?(?:\(([A-E])\)|\[([A-E])\]|([A-E])\s*[.)：:、\-])\s*(.*)$/i);
+var num=line.match(/^(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s*)?(\d{1,3})\s*(?:[.)،:：]|[-–—]\s+)\s*(.*)$/i);
+var head=line.match(/^(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s*)?(\d{1,3})\s*$/i);
+if(!num&&!head)num=line.match(/^(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s+)?(\d{1,3})\s{1,3}(\S.*)$/i);
+if(key&&q){var ch=key[1].toUpperCase();q.correctAnswer=/^[1-5]$/.test(ch)?Number(ch)-1:ch.charCodeAt(0)-65;mode='options';return}
 if(exp&&q){q.explanation=exp[1];mode='explanation';return}
 if(source&&q){q.source=source[1]||q.source;return}
-if(num){finish();q=blank();q.prompt=num[2];mode='prompt';return}
-if(opt&&q){var letter=(opt[1]||opt[2]).toUpperCase().charCodeAt(0)-65;while(q.options.length<=letter)q.options.push('');q.options[letter]=opt[3];mode='options';return}
+if(num||head){finish();q=blank();q.prompt=num?(num[2]||''):'';mode='prompt';return}
+if(opt&&q){var letter=(opt[1]||opt[2]||opt[3]).toUpperCase().charCodeAt(0)-65;while(q.options.length<=letter)q.options.push('');q.options[letter]=opt[4];mode='options';return}
 if(!q){q=blank();mode='prompt'}
-if(mode==='explanation')q.explanation+=(q.explanation?' ':'')+line;else if(mode==='options')warnings.push('Teks setelah opsi tidak dikenali sebagai kunci atau pembahasan: '+line.slice(0,65));else q.prompt+=(q.prompt?' ':'')+line
-});finish();qs=qs.filter(function(x){return x.prompt.trim()});qs.forEach(function(x,i){if(!Number.isInteger(x.correctAnswer)||x.correctAnswer<0||x.correctAnswer>=x.options.length)x.parseIssue='Kunci jawaban belum terbaca';if(x.options.length!==4)x.parseIssue=(x.parseIssue?x.parseIssue+'; ':'')+'Terdeteksi '+x.options.length+' opsi'});return {questions:qs,warnings:warnings}
+if(mode==='explanation')q.explanation+=(q.explanation?' ':'')+line;
+else if(mode==='options'){q.prompt+=(q.prompt?' ':'')+line;warnings.push('Format setelah opsi tidak dikenali sebagai opsi baru, kunci, atau pembahasan: '+line.slice(0,65));mode='prompt'}
+else q.prompt+=(q.prompt?' ':'')+line
+});
+finish();
+qs=qs.filter(function(x){return x.prompt.trim()});
+qs.forEach(function(x){if(!Number.isInteger(x.correctAnswer)||x.correctAnswer<0||x.correctAnswer>=x.options.length)x.parseIssue='Kunci jawaban belum terbaca';if(x.options.length!==4)x.parseIssue=(x.parseIssue?x.parseIssue+'; ':'')+'Terdeteksi '+x.options.length+' opsi'});
+return {questions:qs,warnings:warnings}
 }
 function applyJSON(raw,name){var d;try{d=JSON.parse(raw)}catch(e){throw Error('File JSON tidak valid.')}if(!d||!Array.isArray(d.groups))throw Error('JSON harus memiliki array groups di level teratas.');state.groups=d.groups.map(function(g){return {subtes:g.subtes||'penalaran-umum',packageName:g.packageName||'',...(g.packageId?{packageId:g.packageId}:{}),category:g.category||'',questions:(Array.isArray(g.questions)?g.questions:[]).map(function(q){return {prompt:q.prompt||'',options:Array.isArray(q.options)?q.options.map(String):['','','',''],correctAnswer:Number.isInteger(q.correctAnswer)?q.correctAnswer:null,explanation:q.explanation||'',source:q.source||'',...(q.annotations?{annotations:q.annotations}:{})}})}});if(!state.groups.length)state.groups=[newGroup(1)];state.filename=name||'';render();invalidate();toast('JSON dimuat ke editor. Periksa sebelum ekspor.')}
 async function fileText(file){var ext=file.name.split('.').pop().toLowerCase(),text='';state.filename=file.name;
 if(ext==='json'){var raw=await file.text();$('#source').value=raw;$('#fileStatus').textContent='✓ '+file.name+' · JSON';updateCount();applyJSON(raw,file.name);return}
 if(ext==='docx'){if(!window.mammoth)throw Error('Pustaka DOCX belum termuat. Pastikan koneksi internet aktif.');var out=await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});text=out.value}
-else if(ext==='pdf'){var pdfjs;try{pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs')}catch(e){throw Error('Pembaca PDF tidak bisa dimuat. Coba TXT/DOCX atau pastikan internet aktif.')}pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';var pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise,pages=[];for(var n=1;n<=pdf.numPages;n++){var page=await pdf.getPage(n),c=await page.getTextContent(),items=c.items,lines=[];items.forEach(function(it){if(it.str)lines.push(it.str)});pages.push(lines.join(' '))}text=pages.join('\n\n');if(!text.trim())throw Error('PDF tidak berisi teks yang bisa dipilih; PDF scan perlu OCR terlebih dahulu.')}
+else if(ext==='pdf'){var pdfjs;try{pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs')}catch(e){throw Error('Pembaca PDF tidak bisa dimuat. Coba TXT/DOCX atau pastikan internet aktif.')}pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';var pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise,pages=[];for(var n=1;n<=pdf.numPages;n++){var page=await pdf.getPage(n),c=await page.getTextContent(),items=c.items,lines=[],current='',lastY=null;items.forEach(function(it){if(!it.str)return;var y=it.transform&&typeof it.transform[5]==='number'?it.transform[5]:null;if(current&&y!==null&&lastY!==null&&Math.abs(y-lastY)>2.5){lines.push(current.trim());current=''}if(current&&!/\s$/.test(current)&&!/^\s/.test(it.str))current+=' ';current+=it.str;if(it.hasEOL){lines.push(current.trim());current='';lastY=null}else if(y!==null)lastY=y});if(current.trim())lines.push(current.trim());pages.push(lines.join('\n'))}text=pages.join('\n\n');if(!text.trim())throw Error('PDF tidak berisi teks yang bisa dipilih; PDF scan perlu OCR terlebih dahulu.')}
 else if(['txt','md','csv'].indexOf(ext)>=0)text=await file.text();else throw Error('Format tidak didukung. Gunakan PDF, DOCX, TXT, MD, CSV, atau JSON.');
 $('#source').value=text;$('#fileStatus').textContent='✓ '+file.name+' · '+text.length.toLocaleString('id-ID')+' karakter';updateCount();toast('Teks terbaca. Klik Ekstrak soal untuk mengolahnya.')}
 async function readFile(file){try{await fileText(file)}catch(e){$('#fileStatus').textContent='! '+e.message;toast(e.message,true)}}

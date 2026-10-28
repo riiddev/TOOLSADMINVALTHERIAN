@@ -18,6 +18,16 @@ function normaliseAnswer(value) {
   return null;
 }
 
+async function getGatewayToken() {
+  if (process.env.AI_GATEWAY_API_KEY) return process.env.AI_GATEWAY_API_KEY;
+  try {
+    const { getVercelOidcToken } = await import("@vercel/oidc");
+    return await getVercelOidcToken({ project: "toolsadminvaltherian", team: "thoodev" });
+  } catch (_) {
+    return null;
+  }
+}
+
 function parseModelJSON(content) {
   if (Array.isArray(content)) {
     content = content.map(part => typeof part === "string" ? part : (part && part.text) || "").join("\n");
@@ -49,11 +59,13 @@ function buildMessages(questions) {
 
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
+    const token = await getGatewayToken();
     return send(res, 200, {
       ok: true,
       service: "Bank JSON Studio AI",
       models: MODELS,
-      authConfigured: Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN)
+      authConfigured: Boolean(token),
+      authMethod: token ? (process.env.AI_GATEWAY_API_KEY ? "api-key" : "vercel-oidc") : "unavailable"
     });
   }
 
@@ -101,7 +113,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const apiKey = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
+  const apiKey = await getGatewayToken();
   if (!apiKey) {
     return send(res, 503, {
       error: "AI Gateway authentication is unavailable in this deployment.",

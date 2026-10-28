@@ -6,10 +6,19 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "GET only" });
   }
   try {
-    const prompt = "Solve this multiple choice question in Indonesian. Return only JSON: {\"correctAnswer\":2,\"explanation\":\"...\"}. correctAnswer is zero-based. Question: What is 25 percent of 80? Options: A=10, B=15, C=20, D=25.";
-    const response = await fetch("https://text.pollinations.ai/" + encodeURIComponent(prompt), {
-      method: "GET",
-      headers: { "Accept": "application/json, text/plain" },
+    const response = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        temperature: 0,
+        max_tokens: 250,
+        stream: false,
+        messages: [
+          { role: "system", content: "You are a careful Indonesian UTBK tutor. Reply only valid JSON with fields correctAnswer (zero based) and explanation. CorrectAnswer must be an integer from 0=A through 3=D." },
+          { role: "user", content: "Berapakah 25 persen dari 80? A. 10 B. 15 C. 20 D. 25. Berikan jawaban benar dan pembahasan dalam Bahasa Indonesia." }
+        ]
+      }),
       signal: AbortSignal.timeout(25000)
     });
     const body = await response.text();
@@ -17,7 +26,7 @@ module.exports = async function handler(req, res) {
       ok: response.ok,
       status: response.status,
       contentType: response.headers.get("content-type"),
-      sample: body.slice(0, 1000)
+      sample: body.slice(0, 1400)
     });
   } catch (error) {
     return res.status(200).json({ ok: false, error: String(error && error.message || error).slice(0, 400) });

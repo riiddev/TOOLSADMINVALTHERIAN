@@ -15,6 +15,7 @@ module.exports = async function handler(req, res) {
     existingAnswerOrigin: "",
     providedExplanation: ""
   };
+  const failures = [];
   for (const model of models) {
     try {
       const { getVercelOidcToken } = await import("@vercel/oidc");
@@ -34,7 +35,7 @@ module.exports = async function handler(req, res) {
         signal: AbortSignal.timeout(25000)
       });
       const text = await response.text();
-      if (!response.ok) continue;
+      if (!response.ok) { failures.push({ model, status: response.status, body: text.slice(0, 500) }); continue; }
       const envelope = JSON.parse(text);
       const content = envelope.choices && envelope.choices[0] && envelope.choices[0].message && envelope.choices[0].message.content;
       if (typeof content !== "string") continue;
@@ -52,8 +53,8 @@ module.exports = async function handler(req, res) {
         answer: output && output.correctAnswer,
         explanationLength: output && output.explanation ? output.explanation.length : 0
       });
-    } catch (_) {}
+    } catch (error) { failures.push({ model, error: String(error && error.message || error).slice(0, 300) }); }
   }
-  return res.status(502).json({ ok: false, error: "The free model smoke test failed." });
+  return res.status(502).json({ ok: false, error: "The free model smoke test failed.", failures });
 };
 module.exports.config = { maxDuration: 35 };

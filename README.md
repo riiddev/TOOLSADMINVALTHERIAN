@@ -40,3 +40,10 @@ JSON ekspor dibuat untuk format impor bank soal drilling. Tautan tryout hanya me
 - PDF hasil scan berbentuk gambar belum didukung OCR.
 - Tabel, diagram, rumus rumit, bacaan bersama, dan format sumber yang tidak konsisten mungkin membutuhkan koreksi manual.
 - Aplikasi tidak masuk ke akun Latveria atau menyimpan paket langsung; proses impor tetap dilakukan oleh pengguna pada halaman admin.
+
+
+## Catatan parser (pembaruan)
+
+Parser kini mempertahankan baris teks hasil ekstraksi PDF berdasarkan pemisah baris PDF dan perubahan posisi teks, serta mengenali format nomor seperti `1.`, `1)`, nomor tunggal pada baris tersendiri, dan label opsi `A.`, `A)`, `(A)`, atau `[A]`. Kunci, pembahasan, dan sumber yang berada setelah opsi pada baris yang sama juga dipisahkan jika polanya dikenali.
+
+Tetap periksa hasilnya di editor. PDF dua kolom, urutan teks yang tidak biasa, atau dokumen yang menghilangkan label opsi mungkin membutuhkan koreksi manual.

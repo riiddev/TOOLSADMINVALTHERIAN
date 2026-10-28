@@ -66,14 +66,21 @@ function parseText(text,src){
 var rawLines=text.replace(/\r/g,'').split('\n'),lines=[],qs=[],q=null,mode='prompt',warnings=[];
 function splitInline(raw){
 var line=raw.trim();if(!line)return[];
-var re=/(?:^|\s)(?:\(([A-E])\)|\[([A-E])\]|([A-E])[.)：:、])\s+/gi,m,marks=[],labels=[];
-while((m=re.exec(line))!==null){var label=(m[1]||m[2]||m[3]).toUpperCase(),start=m.index+(/^\s/.test(m[0])?1:0);marks.push({label:label,start:start});if(labels.indexOf(label)<0)labels.push(label)}
-if(labels.length<3||labels.indexOf('A')<0||labels.indexOf('B')<0||labels.indexOf('C')<0)return[line];
-var parts=[];if(marks[0].start>0)parts.push(line.slice(0,marks[0].start).trim());
-for(var i=0;i<marks.length;i++){var end=i+1<marks.length?marks[i+1].start:line.length;parts.push(line.slice(marks[i].start,end).trim())}
-return parts.filter(Boolean)
+var qmark=/(?:^|\s)(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s*)?\d{1,3}[.)]\s+/gi,m,qmarks=0;
+while((m=qmark.exec(line))!==null)qmarks++;
+if(qmarks>1&&/^(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s*)?\d{1,3}[.)]\s+/i.test(line))line=line.replace(/\s+(?=(?:(?:soal|pertanyaan|nomor|no\.?|question|q\.?)\s*)?\d{1,3}[.)]\s+)/gi,'\n');
+var chunks=line.split(/\s+(?=(?:kunci(?:\s+jawaban)?|jawaban(?:\s+benar)?|answer|ans|pembahasan|penjelasan|alasan|sumber|explanation)\s*[:=\-])/i),out=[];
+chunks.forEach(function(chunk){
+var part=chunk.trim();if(!part)return;
+var re=/(?:^|\s)(?:\(([A-E])\)|\[([A-E])\]|([A-E])[.)：:、])\s+/gi,found,marks=[],labels=[];
+while((found=re.exec(part))!==null){var label=(found[1]||found[2]||found[3]).toUpperCase(),start=found.index+(/^\s/.test(found[0])?1:0);marks.push({label:label,start:start});if(labels.indexOf(label)<0)labels.push(label)}
+if(labels.length<3||labels.indexOf('A')<0||labels.indexOf('B')<0||labels.indexOf('C')<0){out.push(part);return}
+if(marks[0].start>0)out.push(part.slice(0,marks[0].start).trim());
+for(var i=0;i<marks.length;i++){var end=i+1<marks.length?marks[i+1].start:part.length;out.push(part.slice(marks[i].start,end).trim())}
+});
+return out.filter(Boolean)
 }
-rawLines.forEach(function(raw){var parts=splitInline(raw);parts.forEach(function(part){lines.push(part)})});
+rawLines.forEach(function(raw){splitInline(raw).forEach(function(part){lines.push(part)})});
 function blank(){return {prompt:'',options:[],correctAnswer:null,explanation:'',source:src||'Konversi file'}}
 function finish(){if(q){qs.push(q);q=null}}
 lines.forEach(function(raw){

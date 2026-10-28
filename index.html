@@ -312,7 +312,7 @@ var data=await requestAI(payload),byId=new Map(data.results.map(function(result)
 batch.forEach(function(entry,index){
 var q=state.groups[entry.gi].questions[entry.qi],result=byId.get(String(entry.gi+':'+entry.qi))||data.results[index];
 if(result&&result.error){
-analyzeQuestion(q);q.aiNeedsReview=true;q.analysisMessage='AI belum berhasil untuk soal ini: '+String(result.error).slice(0,240)+'. '+(q.analysisMessage||'Periksa secara manual.');reviewCount++
+var localStatus=analyzeQuestion(q);q.aiNeedsReview=localStatus!=='solved';q.analysisMessage='AI belum berhasil untuk soal ini: '+String(result.error).slice(0,240)+'. '+(q.analysisMessage||'Periksa secara manual.');if(q.aiNeedsReview)reviewCount++
 }else if(result){
 applyAIResult(q,result);if(q.aiNeedsReview)reviewCount++
 }else{
@@ -324,7 +324,7 @@ completed++
 failedMessage=error&&error.message?error.message:'Layanan AI tidak tersedia';
 for(var remaining=offset;remaining<entries.length;remaining++){
 var entry=entries[remaining],q=state.groups[entry.gi]&&state.groups[entry.gi].questions[entry.qi];if(!q)continue;
-analyzeQuestion(q);q.aiNeedsReview=true;q.analysisMessage='AI tidak tersedia ('+failedMessage+'). '+(q.analysisMessage||'Periksa secara manual.');completed++;reviewCount++
+var localStatus=analyzeQuestion(q);q.aiNeedsReview=localStatus!=='solved';q.analysisMessage='AI tidak tersedia ('+failedMessage+'). '+(q.analysisMessage||'Periksa secara manual.');completed++;if(q.aiNeedsReview)reviewCount++
 }
 render();invalidate();setAIStatus('AI gagal · fallback lokal','error');break
 }

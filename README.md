@@ -47,3 +47,12 @@ JSON ekspor dibuat untuk format impor bank soal drilling. Tautan tryout hanya me
 Parser kini mempertahankan baris teks hasil ekstraksi PDF berdasarkan pemisah baris PDF dan perubahan posisi teks, serta mengenali format nomor seperti `1.`, `1)`, nomor tunggal pada baris tersendiri, dan label opsi `A.`, `A)`, `(A)`, atau `[A]`. Kunci, pembahasan, dan sumber yang berada setelah opsi pada baris yang sama juga dipisahkan jika polanya dikenali.
 
 Tetap periksa hasilnya di editor. PDF dua kolom, urutan teks yang tidak biasa, atau dokumen yang menghilangkan label opsi mungkin membutuhkan koreksi manual.
+
+
+## Answer-key detection and explanations
+
+The parser recognises per-question labels such as `Kunci: C`, `Jawaban benar: B`, `Kunci jawaban nomor 1: B`, as well as separate `Kunci Jawaban` sections with numbered mappings. Numbered `Pembahasan` sections are attached to their matching question numbers.
+
+For questions with numeric options, automatic solving currently supports percentage calculations, basic arithmetic expressions, and simple linear equations in one variable. When the result uniquely matches one option, the app fills the answer index and generates a step-based explanation. If the source's answer key disagrees with the calculation, it displays a conflict warning rather than silently replacing the source key.
+
+For verbal, reading-comprehension, logic, geometry, or other question types outside these rules, the browser-only app cannot reliably infer a correct answer without a supplied key or a capable reasoning model. If a source key is known but no supported method can produce a real explanation, the app creates an explicitly marked draft. Draft explanations are blocked by validation until the user adds a specific, verified rationale. The app does not call an AI API or invent a guaranteed answer.

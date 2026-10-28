@@ -1,6 +1,6 @@
 # Bank JSON Studio
 
-Aplikasi web statis untuk mengubah file soal menjadi JSON yang mengikuti format impor bank soal Latveria.
+Aplikasi web untuk mengubah file soal menjadi JSON sesuai format impor bank soal Latveria. Ekstraksi berjalan lokal di browser; analisis jawaban dan pembahasan memakai endpoint serverless dengan model AI gratis tanpa API key dari pengguna.
 
 ## Fitur
 
